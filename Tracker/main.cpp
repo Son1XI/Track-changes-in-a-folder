@@ -1,10 +1,11 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
-#include <windows.h>
+#include <Windows.h>
 #include <string>
 #include <ctime>
 #include <chrono>
 #include <vector>
+#include <thread>
 
 using namespace std;
 
@@ -45,12 +46,12 @@ void checkForChanges(string dir) {
 	time_t start_time = chrono::system_clock::to_time_t(start);
 	cout << "Started at: " << ctime(&start_time) << endl;
 	end = start;
-	end += chrono::seconds(60); // Время до которого программа будет собирать информацию
+	end += chrono::seconds(10); // Время до которого программа будет собирать информацию
 	time_t end_time = chrono::system_clock::to_time_t(end);
 	cout << "Will end at: " << ctime(&end_time) << endl;
 
+	
 	while (now < end) {
-
 		result = ReadDirectoryChangesW(hDir,
 			&buf,
 			sizeof(buf),
@@ -59,42 +60,28 @@ void checkForChanges(string dir) {
 			&returnedB,
 			NULL,
 			NULL);
-
+		
 		if (result) // Получили сообщение об изменении в отслеживаемой директории
 		{
 			memset(file, 0, strlen(file)); // Убираем мусор что бы не возникали лишние символы (Что будет без этого: Новая папкаМММММММММ)
 			WideCharToMultiByte(CP_ACP, 0, pNotify->FileName, pNotify->FileNameLength / 2, file, 260, NULL, NULL); // Переводит wchar от FILE_NOTIFY_INFORMATION в char
 			if (pNotify->Action == FILE_ACTION_ADDED) { // Если был добавлен файл или папка
 				string addChange = "File Added: ";
-				string addChange2 = file;
 				allChanges.push_back(addChange);
-				allChanges.push_back(addChange2);
-				now = chrono::system_clock::now();
 			}
 			else if (pNotify->Action == FILE_ACTION_REMOVED) { // Если удален файл или папка
 				string remChange = "File Deleted: ";
-				string remChange2 = file;
 				allChanges.push_back(remChange);
-				allChanges.push_back(remChange2);
-				now = chrono::system_clock::now();
 			}
 			else if (pNotify->Action == FILE_ACTION_MODIFIED) { // Если изменили файл (записали/удалили содержимое)
 				string modChange = "File Modified: ";
-				string modChange2 = file;
 				allChanges.push_back(modChange);
-				allChanges.push_back(modChange2);
-				now = chrono::system_clock::now();
 			}
 			else if (pNotify->Action == FILE_ACTION_RENAMED_OLD_NAME) { // Если переименовали файл или папку
 				string renChange = "File Renamed: ";
-				string renChange2 = file;
 				allChanges.push_back(renChange);
-				allChanges.push_back(renChange2);
-				now = chrono::system_clock::now();
 			}
-			else {
-				now = chrono::system_clock::now();
-			}
+			allChanges.push_back(file);
 		}
 		now = chrono::system_clock::now();
 	}
@@ -103,12 +90,10 @@ void checkForChanges(string dir) {
 	for (const auto& str : allChanges) // Вывод всех изменений за 60 секунд
 	{
 		cout << str;
-		if (i % 2 == 0) {
+		if (i % 2 == 0)
 			cout << "\n";
-		}
 		i++;
 	}
-	return;
 }
 
 
